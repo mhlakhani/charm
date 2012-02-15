@@ -7,7 +7,7 @@ Runs all known tests on charm-crypto
 import unittest, os, sys
 from all_unittests import getAllTestsSuite
 from all_schemes import testSchemes, modules, skip
-
+import xmlrunner
 if __name__ == '__main__':
     if os.access("schemes/", os.R_OK):
         os.chdir('schemes/')
@@ -22,6 +22,7 @@ if __name__ == '__main__':
     suite = unittest.TestSuite()
     suite.addTests(testSchemes(modules, skip))
     suite.addTests(getAllTestsSuite(paths))
-    
-    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    xmlrunner.XMLTestRunner(output="/tmp/test_results").run(suite)    
+#    unittest.TextTestRunner(verbosity=2).run(suite)
     

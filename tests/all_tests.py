@@ -23,6 +23,6 @@ if __name__ == '__main__':
     suite.addTests(testSchemes(modules, skip))
     suite.addTests(getAllTestsSuite(paths))
 
-    xmlrunner.XMLTestRunner(output="/tmp/test_results").run(suite)    
+    xmlrunner.XMLTestRunner(output="test-reports").run(suite)    
 #    unittest.TextTestRunner(verbosity=2).run(suite)
     

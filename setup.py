@@ -1,4 +1,5 @@
 from distutils.core import setup, Extension
+import  distutils.sysconfig
 import os,platform
 
 _ext_modules = []
@@ -13,6 +14,9 @@ def read_config(file):
            config_key[ param[0] ] = param[1] 
     f.close()
     return config_key
+
+install_path = distutils.sysconfig.get_python_lib(); 
+so_location  = os.path.join(install_path,"charm/")
 
 print("Platform:", platform.system())
 config = os.environ.get('CONFIG_FILE')
@@ -29,32 +33,35 @@ if opt.get('PAIR_MOD') == 'yes':
     if opt.get('USE_PBC') == 'yes':
         pairing_module = Extension('pairing', include_dirs = [path+'utils/'], 
                            sources = [path+'pairingmath/pairingmodule.c', path+'utils/sha1.c', path+'utils/base64.c'],
-                           libraries=['pbc', 'gmp'])
+                           libraries=['pbc', 'gmp'], runtime_library_dirs=[benchmark_so_location])
     else:
         # build MIRACL based pairing module - note that this is for experimental use only
         pairing_module = Extension('pairing', include_dirs = [path+'utils/', path+'pairingmath/miracl/'], 
                            sources = [path+'pairingmath/pairingmodule2.c', path+'utils/sha1.c', path+'pairingmath/miracl/miraclwrapper.cc'],
-                           libraries=['gmp','stdc++'], extra_objects=[path+'pairingmath/miracl/miracl.a'], extra_compile_args=None)
+                           libraries=['gmp','stdc++'], extra_objects=[path+'pairingmath/miracl/miracl.a'], extra_compile_args=None,
+                           runtime_library_dirs=[benchmark_so_location])
     _ext_modules.append(pairing_module)
    
 if opt.get('INT_MOD') == 'yes':
    integer_module = Extension('integer', include_dirs = [path+'utils/'],
                            sources = [path+'integermath/integermodule.c', path+'utils/sha1.c', path+'utils/base64.c'], 
-                           libraries=['gmp', 'crypto'])
+                           libraries=['gmp', 'crypto'],
+                           runtime_library_dirs=[benchmark_so_location])
    _ext_modules.append(integer_module)
    
 if opt.get('ECC_MOD') == 'yes':
    ecc_module = Extension('ecc', include_dirs = [path+'utils/'], 
 				sources = [path+'ecmath/ecmodule.c', path+'utils/sha1.c', path+'utils/base64.c'], 
-				libraries=['gmp', 'crypto'])
+				libraries=['gmp', 'crypto'],
+                runtime_library_dirs=[benchmark_so_location])
    _ext_modules.append(ecc_module)
 
-benchmark_module = Extension('benchmark', sources = [path+'utils/benchmarkmodule.c'])
-cryptobase = Extension('cryptobase', sources = [path+'cryptobase/cryptobasemodule.c'])
+benchmark_module = Extension('benchmark', sources = [path+'utils/benchmarkmodule.c'], runtime_library_dirs=[benchmark_so_location])
+cryptobase = Extension('cryptobase', sources = [path+'cryptobase/cryptobasemodule.c'], runtime_library_dirs=[benchmark_so_location])
 
-aes = Extension('AES', sources = [path+'cryptobase/AES.c'])
-des  = Extension('DES', include_dirs = [path+'cryptobase/libtom/'], sources = [path+'cryptobase/DES.c'])
-des3  = Extension('DES3', include_dirs = [path+'cryptobase/libtom/'], sources = [path+'cryptobase/DES3.c'])
+aes = Extension('AES', sources = [path+'cryptobase/AES.c'], runtime_library_dirs=[benchmark_so_location])
+des  = Extension('DES', include_dirs = [path+'cryptobase/libtom/'], sources = [path+'cryptobase/DES.c'], runtime_library_dirs=[benchmark_so_location])
+des3  = Extension('DES3', include_dirs = [path+'cryptobase/libtom/'], sources = [path+'cryptobase/DES3.c'], runtime_library_dirs=[benchmark_so_location])
 _ext_modules.extend([benchmark_module, cryptobase, aes, des, des3])
 
 if platform.system() in ['Linux', 'Windows']:

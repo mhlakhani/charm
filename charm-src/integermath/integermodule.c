@@ -1156,12 +1156,19 @@ static PyObject *genRandomPrime(Integer *self, PyObject *args) {
 			/* This routine generates safe prime only when safe=TRUE in which prime, p is selected
 			 * iff (p-1)/2 is also prime.
 			 */
+#ifndef ANDROID
 			if(safe == TRUE) // safe is non-zero
 				BN_generate_prime(bn, bits, safe, NULL, NULL, NULL, NULL);
 			else
 				/* generate strong primes only */
 				BN_generate_prime(bn, bits, FALSE, NULL, NULL, NULL, NULL);
-
+#else
+			if(safe == TRUE) // safe is non-zero
+				BN_generate_prime_ex(bn, bits, safe, NULL, NULL, NULL);
+			else
+				/* generate strong primes only */
+				BN_generate_prime_ex(bn, bits, FALSE, NULL, NULL, NULL);
+#endif
 			debug("Safe prime => ");
 			print_bn_dec(bn);
 			bnToMPZ(bn, rop->e);

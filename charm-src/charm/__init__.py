@@ -3,6 +3,7 @@ import platform
 
 install_system=platform.system()
 
+path_to_charm = None
 path_to_charm2 = None
 if install_system == 'Darwin':
    # get the path to site-packages for operating system
@@ -21,7 +22,7 @@ elif install_system == 'Linux':
 else:
    print("Installing on", install_system)
    
-sys.path.append(path_to_charm + "/charm/")
+if path_to_charm: sys.path.append(path_to_charm + "/charm/")
 if path_to_charm2: sys.path.append(path_to_charm2 + "/charm/")
 # now python can easily find our modules
 # dependency for pairing, integer and ecc mods

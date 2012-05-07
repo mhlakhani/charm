@@ -1,5 +1,68 @@
-from distutils.core import setup, Extension
+from setuptools import setup, Extension
 import os,platform
+
+def patch_distutils():
+    import os
+    from distutils import sysconfig
+    from distutils.sysconfig import get_python_inc as du_get_python_inc
+
+    def get_python_inc(plat_specific=0, *args, **kwargs):
+        if plat_specific == 0:
+            out = os.environ["PY4A_INC"]
+        else:
+            out = du_get_python_inc(plat_specific=plat_specific, *args, **kwargs)
+        return out
+    setattr(sysconfig, 'get_python_inc', get_python_inc)
+
+    def customize_compiler(compiler):
+        cflags = "-I%s" % os.environ["PY4A_INC"]
+        cflags+= " -I%s" % os.environ["GMP_INC"]
+        cflags+= " -I%s" % os.environ["OSSL_INC"]
+        cflags+= " -I."
+        cflags+=" -MMD -MP -MF -fpic -ffunction-sections -funwind-tables -fstack-protector"
+        cflags+=" -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__"
+        cflags+=" -Wno-psabi -march=armv5te -mtune=xscale -msoft-float -mthumb -Os"
+        cflags+=" -fomit-frame-pointer -fno-strict-aliasing -finline-limit=64"
+        cflags+=" -DANDROID  -Wa,--noexecstack -O2 -DNDEBUG -g"
+        cc = "arm-linux-androideabi-gcc"
+        cxx = "arm-linux-androideabi-g++"
+        cpp = "arm-linux-androideabi-cpp"
+        ldshared= "%s -shared" % cxx
+        ldshared+=" -L%s" % os.environ["PY4A_LIB"]
+        ldshared+=" -L%s/Lib" % os.environ["PY4A_LIB"]
+        ldshared+=" -L%s" % os.environ["GMP_LIB"]
+        ldshared+=" -L."
+        ldshared+=" -lc -lstdc++ -lm -Wl,--no-undefined -Wl,-z,noexecstack -lpython3 -lpython3.2m"
+        ccshared = sysconfig.get_config_vars("CCSHARED")
+        so_ext = "so"
+
+        if 'LDFLAGS' in os.environ:
+                ldshared += os.environ['LDFLAGS']
+        if 'CFLAGS' in os.environ:
+            cflags += os.environ['CFLAGS']
+            ldshared += os.environ['CFLAGS']
+        if 'CPPFLAGS' in os.environ:
+                cpp += os.environ['CPPFLAGS']
+                cflags += os.environ['CPPFLAGS']
+                ldshared += os.environ['CPPFLAGS']
+     
+        cc_cmd = cc + ' ' + cflags
+        compiler.set_executables(
+            preprocessor=cpp,
+            compiler=cc_cmd,
+            compiler_so=cc_cmd + ' ' + ' '.join(ccshared),
+            compiler_cxx=cxx,
+            linker_so=ldshared,
+            linker_exe=cc)
+
+        compiler.shared_lib_extension = so_ext
+    setattr(sysconfig, 'customize_compiler', customize_compiler)
+
+    def get_config_h_filename():
+        inc_dir = os.path.join(os.environ["PY4A_INC"], "..")
+        config_h = 'pyconfig.h'
+        return os.path.join(inc_dir, config_h)
+    setattr(sysconfig, 'get_config_h_filename', get_config_h_filename)
 
 _ext_modules = []
 
@@ -16,7 +79,7 @@ def read_config(file):
 
 print("Platform:", platform.system())
 config = os.environ.get('CONFIG_FILE')
-opt = {}
+opt = {'PAIR_MOD':'yes', 'USE_PBC':'yes', 'INT_MOD':'yes','ECC_MOD':'yes'}
 if config != None:
    print("Config file:", config)
    opt = read_config(config)
@@ -45,8 +108,8 @@ if opt.get('INT_MOD') == 'yes':
    
 if opt.get('ECC_MOD') == 'yes':
    ecc_module = Extension('ecc', include_dirs = [path+'utils/'], 
-				sources = [path+'ecmath/ecmodule.c', path+'utils/sha1.c', path+'utils/base64.c'], 
-				libraries=['gmp', 'crypto'])
+                sources = [path+'ecmath/ecmodule.c', path+'utils/sha1.c', path+'utils/base64.c'], 
+                libraries=['gmp', 'crypto'])
    _ext_modules.append(ecc_module)
 
 benchmark_module = Extension('benchmark', sources = [path+'utils/benchmarkmodule.c'])
@@ -63,16 +126,18 @@ if platform.system() in ['Linux', 'Windows']:
    if opt.get('INT_MOD') == 'yes': integer_module.sources.append(path+'utils/benchmarkmodule.c')
    if opt.get('ECC_MOD') == 'yes': ecc_module.sources.append(path+'utils/benchmarkmodule.c')
 
+patch_distutils()
+
 setup(name = 'Charm-Crypto',
-	ext_package = 'charm',
-	version =  _charm_version,
-	description = 'Charm is a framework for rapid prototyping of cryptosystems',
-	ext_modules = _ext_modules,
-	author = "J Ayo Akinyele",
-	author_email = "ayo.akinyele@charm-crypto.com",
-	url = "http://charm-crypto.com/",
-	packages = ['charm', 'toolbox', 'compiler', 'schemes'],
-	package_dir = {'charm': 'charm-src/charm'},
+    ext_package = 'charm',
+    version =  _charm_version,
+    description = 'Charm is a framework for rapid prototyping of cryptosystems',
+    ext_modules = _ext_modules,
+    author = "J Ayo Akinyele",
+    author_email = "ayo.akinyele@charm-crypto.com",
+    url = "http://charm-crypto.com/",
+    packages = ['charm', 'toolbox', 'compiler', 'schemes'],
+    package_dir = {'charm': 'charm-src/charm'},
     package_data = {'charm':['__init__.py', 'engine/*.py'], 'toolbox':['*.py'], 'compiler':['*.py'], 'schemes':['*.py'], 'param':['*.param']},
         license = 'GPL'
      )

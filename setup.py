@@ -13,10 +13,16 @@ def patch_distutils():
             out = du_get_python_inc(plat_specific=plat_specific, *args, **kwargs)
         return out
     setattr(sysconfig, 'get_python_inc', get_python_inc)
+    
+    # Just so that it creates the global so we can set it later
+    sysconfig.get_config_var('Py_ENABLE_SHARED')
+    getattr(sysconfig, '_config_vars')['Py_ENABLE_SHARED'] = False
 
     def customize_compiler(compiler):
         cflags = "-I%s" % os.environ["PY4A_INC"]
+        cflags+= " -I%s" % os.environ["PY4A"]
         cflags+= " -I%s" % os.environ["GMP_INC"]
+        cflags+= " -I%s" % os.environ["PBC_INC"]
         cflags+= " -I%s" % os.environ["OSSL_INC"]
         cflags+= " -I."
         cflags+=" -MMD -MP -MF -fpic -ffunction-sections -funwind-tables -fstack-protector"
@@ -31,6 +37,7 @@ def patch_distutils():
         ldshared+=" -L%s" % os.environ["PY4A_LIB"]
         ldshared+=" -L%s/Lib" % os.environ["PY4A_LIB"]
         ldshared+=" -L%s" % os.environ["GMP_LIB"]
+        ldshared+=" -L%s " % os.environ["OSSL_LIB"]
         ldshared+=" -L."
         ldshared+=" -lc -lstdc++ -lm -Wl,--no-undefined -Wl,-z,noexecstack -lpython3 -lpython3.2m"
         ccshared = sysconfig.get_config_vars("CCSHARED")
@@ -126,7 +133,21 @@ if platform.system() in ['Linux', 'Windows']:
    if opt.get('INT_MOD') == 'yes': integer_module.sources.append(path+'utils/benchmarkmodule.c')
    if opt.get('ECC_MOD') == 'yes': ecc_module.sources.append(path+'utils/benchmarkmodule.c')
 
-patch_distutils()
+if os.environ.get('CHARM_ANDROID', 'no') == 'yes':
+    
+    #export PY4A="../python-for-android/python3-alpha/python3-src"
+    #export PY4A_INC="${PY4A}/Include"
+    #export PY4A_LIB="${PY4A}"
+    #export PYTHONPATH="${PYTHONPATH}:${PY4A}/Python"
+    #export GMP_INC="${PY4A}/../gmp-5.0.2"
+    #export PBC_INC="${PY4A}/../pbc-0.5.12/include"
+    #export OSSL_INC="${PY4A}/../openssl/include"
+    #export GMP_LIB="${PY4A}/../thirdparty/lib"
+    #export PBC_LIB=""
+    #export OSSL_LIB="${PY4A}/../openssl/lib"
+    #export CHARM_ANDROID="yes"
+
+    patch_distutils()
 
 setup(name = 'Charm-Crypto',
     ext_package = 'charm',

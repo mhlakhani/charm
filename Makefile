@@ -1,4 +1,3 @@
-
 CONFIG=config.mk
 include ./${CONFIG}
 export CONFIG_FILE=${CONFIG}
@@ -117,6 +116,7 @@ source:
 .PHONY: install
 install:
 	$(PYTHON) setup.py install
+	cp /usr/local/lib/python3.2/dist-packages/Charm_Crypto-0.4-py3.2-linux-x86_64.egg/charm/benchmark.cpython-32mu.so /usr/local/lib/python3.2/dist-packages/benchmark.so
 	
 .PHONY: test
 test:
